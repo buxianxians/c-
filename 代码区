@@ -1,0 +1,1220 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#define MAX_STR  30						//定义字符串的最大长度 
+#define unstu_size sizeof(UNstu)      //本科生链表所占空间大小(由于链表的信息域可变的可能，减少代码的修改量)
+#define delete_MAX  30					//定义最多手动删除的个数 
+#include <time.h>
+#include <math.h>
+#define max_stu_num 1000				//学生最大数量 
+#define major_num  5                      //专业数量 
+#define sub_num	3						//科目数量
+#define sta_num 6 						//需统计类型数量（如平均数） 
+//--------------------------------------定义区 
+
+//定义本科学生信息链表
+typedef struct undstu {
+	long num;         //学号 
+	enum Gender{boy,gril}  gender;   
+	char major[MAX_STR];   //专业 
+	char cls[MAX_STR];		//班级 
+	char name[MAX_STR];     //名字 
+	float score[3];			//分数 
+	float all_score;   		//总分 
+	int rank;
+	struct undstu *next;      //指针 
+}UNstu,*ptr_UNstu;
+
+
+//以下是功能函数的声明 (主要实现的函数，并非全部)
+void menu (void);											    	//功能菜单 (316-339)
+void un_get_int(ptr_UNstu);  								    	//用来填写本科生信息域信息(419-455)
+void to_get_name(void);												//用来产生随机名字(341-370) 
+ptr_UNstu add_un_stu(ptr_UNstu*,ptr_UNstu*,int *, int * ,int*);			//用来将本科生信息加入链表 (378-417)
+ptr_UNstu sear_un_stu(ptr_UNstu, int);								//按唯一标识查找信息(查询出来的只有一个)(576-619)
+int ser_more_stu(ptr_UNstu,ptr_UNstu *,ptr_UNstu *,int);			//一类信息的查找 (636-748)
+void delete_stu(ptr_UNstu*,char name[MAX_STR],int * );				//按名字删除本科生信息(749-785)
+void delete_all(ptr_UNstu *);										//删除所有信息 (786-809)
+void modify(ptr_UNstu );											//修改信息 (810-877)
+void print_(void);                                                  //打印表格输出时的线 (456-467)
+void page_print(ptr_UNstu,int *);									//一页的打印(468-487)
+void page_process(ptr_UNstu,int);									// 打印的主函数 (488-556)
+void print_un_stu(ptr_UNstu,int);									//打印本科生信息 (557-571)
+void print_all(ptr_UNstu,int);										//打印所有学生信息 (572-575)
+void update_rank(int *, ptr_UNstu);									//更新排名(878-896)
+int get_ranking(int *a,int b);										//对一个数输出的排名 (二分法查找，并添加了重复信息的判断)(932-960)
+void insert(int, int, int *);									    //insert 函数的编写(897-912)
+void pop(int ,int *);												//pop函数的编写 (913-927)
+int by_compare(const void *a,const void  *b);						//用于快速排序的函数 (928-931)
+void re_sort_by_score(ptr_UNstu *head,int num,int);					//按方法从重置链表	(982-1024)			
+void swap(ptr_UNstu p, ptr_UNstu q);								//交换信息域 (974-981)
+void statistics(ptr_UNstu head, int num,double data[sub_num][sta_num]);			//统计主函数 (1025-1060)
+void print__(void);													//打印统计信息使用的线(1110-1121) 
+void calc(float *a,double result[],int num,int);						//计算函数 (1061-1109)
+void save(ptr_UNstu,char a[],int, double data[sub_num][sta_num]);          //保存(1122-1176)
+void read(ptr_UNstu *,ptr_UNstu *,int a[],int *);				   	//读取数据，并创建链表 (1192-1214)
+void add_read(ptr_UNstu p,ptr_UNstu *,ptr_UNstu *);    				//将读取的数据加入链表中 (1123-1191)
+//存放专业 
+ 
+//主函数 
+int main(){
+	//初始化区							
+	ptr_UNstu head = NULL;   	 					//记录头节点 
+	ptr_UNstu tail = NULL;							//记录尾节点 
+	ptr_UNstu const_temp = NULL;   	 				//用于主链表头与视图头之间的转换，保存主视图
+	ptr_UNstu temp;									//用于视图与视图之间
+	int level = 0;									//记录视图等级
+	int *rank;                						//指向排列数组(为了能够在视图切换时来改变指向的排名数组) 
+	int *temp_rank;									//记录上一个视图的总分排序 
+	int rank_list[max_stu_num] = {0};				//一个足够用的数组 
+	int num = 0;									//记录个数 (由于指针的退化，这个变量在后面尤其重要，如计算和开辟合适的空间,都需要个数)
+	int temp_num;									//同上 
+	int const_num;									//与const_temp类似 
+	read(&head, &tail,rank_list, &num);				 //读取数据,并导入数组	 
+	double data[sub_num+1][sta_num]; 				//这里记录这统计信息,三科和总（如平均数 方差, 不及格的个数,最大值与最小值）
+	qsort(rank_list, num, sizeof(int),by_compare );	 //对所有数据排序 
+	rank_list[num] = -1;							//数组最后一个元素赋值为-1，标志数组的结束，不使用（relloc） 
+	rank = rank_list;								//初始化rank 
+	update_rank(rank, head);						//更新校级排名 
+	int least_num = least_num = tail->num;;						//最后一个学号的号码 (学号和学生信息是不一致的，因为删除学生信息后，这时候我不会在使用这个学号)
+	srand((unsigned)time(NULL));					//随机种子 								
+	int command;
+	while(1){
+		system("cls");
+		if(const_temp != NULL){
+			printf("\t\t\t\t\t\t\t你正处在(%d)级视图当中（不支持修改信息(如要修改则返回主信息域),但可以保存）",level);
+		}
+		menu();								//	指导菜单的创建 
+		printf("\t\t\t\t输入命令:");
+		scanf("%d",&command);
+		//添加信息 
+		if (command == 1 and level == 0){							
+				system("cls");
+				add_un_stu(&head,&tail,rank, &num,&least_num);
+				update_rank(rank, head);
+				getchar();					//I/O暂停 
+			}
+		//打印所有信息 
+		else if(command == 2){							 
+			print_all(head,num);
+			getchar();
+		}
+		//查询信息 
+		else if(command == 3){
+				int ser_command;
+				while(1){
+					system("cls"); 
+					printf("\t\t\t\t\t\t\t1:按名字查询\n\t\t\t\t\t\t\t2:按学号查询\n\t\t\t\t\t\t\t3:打印所有信息\n\t\t\t\t\t\t\t4:对专业的查询\n\t\t\t\t\t\t\t5:对班级的查询\n\t\t\t\t\t\t\t6:性别查询\n\t\t\t\t\t\t\t7:数学不及格\n\t\t\t\t\t\t\t8:英语不不及格\n\t\t\t\t\t\t\t9:c语言不及格\n\t\t\t\t\t\t\t0:退出\n");
+					printf("\t\t\t\t\t请输功能选项:");
+					scanf("%d",&ser_command);
+					if(ser_command == 3){
+						print_all(head,num);
+						getchar();
+						continue;
+					}
+					else if((ser_command == 4) or (ser_command == 5) or (ser_command == 6) or (ser_command == 7) or (ser_command == 8) or (ser_command == 9)){
+						ptr_UNstu new_head = NULL;
+						ptr_UNstu new_tail = NULL;
+						int num_s;			//返回查询的个数，便于打印 
+						num_s = ser_more_stu(head,&new_head,&new_tail,ser_command);
+						if (num_s == 0){
+							printf("\t\t\t\t\t\t未查询到任何信息");
+							getchar();
+						}
+						else{
+						page_process(new_head, num_s);	
+						getchar();
+						if(new_head != NULL){
+								printf("是否进行视图(1/0):");
+								char choose;
+								choose = getchar();
+								if(choose == '1'){
+									level ++;
+									if(const_temp == NULL){
+										const_temp = head;
+										head = new_head;
+										const_num = num;
+										num = num_s; 
+									}
+									else{
+										temp_num = num;
+										num = num_s;									
+										temp = head;
+										tail = new_tail;
+										head = new_head;
+										}
+								}
+						}
+						break;	
+					}
+				}
+					else if(ser_command == 0){
+						break;
+					}
+					else if((ser_command == 1) or (ser_command == 2)){
+						system("cls");
+						while(1){
+							ptr_UNstu p;
+							p = sear_un_stu(head, ser_command);
+							print_();
+							printf("\t\t\t|序号|学号      |名字      |性别|专业           |班级           |数学    |英语    |C语言   |总分    |校排|\n");
+							print_();
+							int a = 1;
+							print_un_stu(p,1);
+							getchar();
+							if(p != NULL){
+								if(level == 0){
+									printf("\t\t\t\t\t\t否进行修改(不修改则换行,修改则输入1):");
+									char a = 0;
+									scanf("%c", &a);
+									if(a == '1'){
+										modify(p);
+										update_rank(rank, head);
+									}
+								}
+								else printf("\t\t\t\t\t视图不支持修改");
+							}
+							printf("\t\t\t\t\t\t如要退出输入0,继续则换行:");
+							char exit_command;
+							exit_command = getchar();
+							if(exit_command == '0'){
+								break;
+							}
+							printf("\n");
+						}
+				  }
+				  else {
+					  printf("\t\t\t\t\t\t你的输入有误");
+					  getchar();
+				 } 
+				}
+			}
+		//删除信息 
+		else if(command == 4){
+				if(level == 0){
+					char s[MAX_STR] = "1";
+					while(1){
+						printf("\t\t\t\t请输入要删除学生的姓名:(e退出,p显示所有信息,d删除所有信息):");
+						scanf("%s",s);
+						if (strcmp(s,"p") == 0){
+							print_all(head,num);
+							continue;
+						}
+						if(strcmp(s,"e") == 0){
+							break;
+						}
+						if(strcmp(s,"d") == 0){
+							delete_all(&head);
+							break;
+						}
+						delete_stu(&head,s,rank);
+						num--;
+						update_rank(rank, head);
+					}
+					getchar();
+				}
+				else{
+					getchar();
+					printf("\t\t\t\t\t\t视图不支持修改信息");
+					getchar();
+				}
+			}
+		//数组重组排序 
+		else if(command == 5){
+				printf("\t\t\t\t\t\t0:按总成绩\n\t\t\t\t\t\t1:按数学成成绩\n\t\t\t\t\t\t2:按英语成绩\n\t\t\t\t\t\t3:按C语言成绩\n\t\t\t\t\t\t4:按字典序");
+				printf("\n");
+				printf("\t\t\t\t\t\t输入选择:");
+				int command;
+				scanf("%d",&command);
+				getchar();
+				re_sort_by_score(&head,num,command);
+				printf("\t\t\t\t\t\t已经按指定方法排序");
+				getchar();
+			}
+		//保存 
+		else if(command == 6){
+			char name[MAX_STR];
+			printf("请输入文件名:");
+			scanf("%s",name);
+			getchar();
+			save(head,name,num,data);
+		}
+		//统计打印 
+		else if(command == 7){
+			system("cls");
+			statistics(head, num, data);
+			print__();
+			printf("\t\t\t\t\t|学科 |平均成绩     |方差         |最大值|最小值|不及格个数|优秀的个数|\n");
+			print__();
+			char name [4][6] = {"数学\0", "英语\0", "c语言", "总分\0"};
+			for(int i = 0;i<4;i++){
+				printf("\t\t\t\t\t|%-5s|%-13.6lf|%-13.6lf|%-6.1lf|%-6.1lf|%-10d|%-10d|\n",name[i],data[i][0],data[i][1],data[i][2],(data)[i][3],(int)data[i][4],(int)data[i][5]);
+				print__();
+			}
+			getchar();
+			getchar();
+			
+			
+		}
+		//视图切换	
+		else if(command == 8){
+			int command_2;
+			printf("\t\t\t\t\t\t(1:返回上一级视图,2:返会主信息):",level);
+			scanf("%d",&command_2);
+			getchar();
+			if(command_2 == 1){
+				if(level == 0){
+					printf("\t\t\t\t\t\t\t视图为主视图");
+				}
+				else if(level == 1){
+					head = const_temp;
+					const_temp = NULL;
+					num = const_num;
+				}
+				else{
+					head = temp;
+					num = temp_num;
+					level--;
+					}
+			}
+			else if (command_2 == 2){
+					if(level == 0){
+						printf("\t\t\t\t\t\t\t视图为主视图");
+					}	
+				else{
+					level = 0;
+					head = const_temp;
+					const_temp = NULL;
+					num = const_num;
+				}
+			}
+			else{
+				printf("输入有误");
+				getchar();
+			}
+			
+			
+		}
+		//系统退出 
+		else if(command == 0){
+			if (level == 0){
+				char name[MAX_STR];
+				strcpy(name,"本科生(浏览)");
+				printf("信息已保存,退出程序\n");
+				if (level != 0){
+					head = const_temp;
+					const_temp = NULL;
+					num = const_num;
+				}
+				save(head,name,num,data);
+				exit(0);						//退出		
+			}
+			else {
+				getchar();
+				printf("\t\t\t\t\t\t\terror :你不处于主信息中，保存会使信息丢失");
+				getchar();
+			}
+			}
+		else{
+				printf("你的输入有误");
+				getchar();
+			}
+		}
+	}
+	
+//--------------函数的定义----------------------------------------------------------
+void menu(void){
+	system("title 学生管理系统devc++20.7");
+	for(int i=0;i<5;i++){
+		printf("\n");
+	}
+	
+	printf("\t\t\t\t\t\t\t****************欢迎使用学生管理系统************************************\n");
+	printf("\t\t\t\t\t\t\t*                                                                      *\n");
+	printf("\t\t\t\t\t\t\t*              1:插入学生信息(实时更新排名)                            *\n");
+	printf("\t\t\t\t\t\t\t*              2:打印所有学生信息(表格打印，和翻页处理)                *\n");
+	printf("\t\t\t\t\t\t\t*              3:查询学生信息(支持修改信息，建立视图，不同方法的查询)  *\n");
+	printf("\t\t\t\t\t\t\t*              4:删除学生信息(实时更新排名)                            *\n");
+	printf("\t\t\t\t\t\t\t*              5:按指定方法重新排列 (支持各种方法排序)                 *\n");
+	printf("\t\t\t\t\t\t\t*              6:保存信息(需输入名字)                                  *\n");
+	printf("\t\t\t\t\t\t\t*              7:查看统计数据                                          *\n");
+	printf("\t\t\t\t\t\t\t*              8:视图切换                                              *\n");
+	printf("\t\t\t\t\t\t\t*                                                                      *\n");
+	printf("\t\t\t\t\t\t\t*              0:退出程序(保存信息)                                    *\n");
+	printf("\t\t\t\t\t\t\t************************************************************************\n");
+	printf("\n");
+}
+
+//产生随机名字
+void to_get_name(char get_name[]){
+	int a = 0;
+	if(strcmp(get_name,"cmd.exe /c cls") == 0){
+		a = 1;
+	}
+	char first_name[][8] = {"杨", "朱", "言", "许", "陈", "罗", "彭", "欧阳", "刘", "赵", "钱", "孙", "李", "孔", "龙"};
+	char secon_name[][8] = {"佳", "建", "强", "诗", "情", "画", "一", "多", "澄", "雪", "展", "国", "智", "罡", "傲天"};
+	char end_name[][8] =   {"斌", "豪", "晖", "御", "鹏", "国", "根", "翔", "宇", "伟", "浩", "飞", "琪", "琦", "思"}; 
+	int name_len = rand()%2 + 2;
+	for(int i =0;i<name_len;i++){
+		int index = rand()%15; 
+		if(i == 0){
+			strcat(get_name,first_name[index]);
+		}
+		if(i == 1){
+			strcat(get_name,secon_name[index]);
+		}
+		if(i == 2){
+			strcat(get_name,end_name[index]);
+		}
+	}
+	if(a == 1){
+	int i = 0;
+	for(;i<strlen(get_name)-14;i++){
+		get_name[i] = get_name[i+14];
+	}
+	get_name[i]  = '\0';
+	}
+}
+//随机专业 
+void to_get_major(char major[]){
+	char major_list[][MAX_STR] = {"通信","网络安全","土木工程","大数据","计算机科学"};
+	int index = rand()%5;
+	strcpy(major,major_list[index]);
+}
+
+//尾插法添加链表 
+ptr_UNstu add_un_stu(ptr_UNstu *head,ptr_UNstu *tail,int *a,int *num,int *least_num){ 
+	printf("\t\t\t\t\t\t\t你要输入几位学生的信息:");
+	int n = 0;
+	scanf("%d",&n);   
+	printf("\t\t\t\t-----------------请在以下输入学生信息-----------------\n");
+	ptr_UNstu student;
+	for(int i=0;i<n;i++){
+		student = (ptr_UNstu)malloc(unstu_size);
+	if (student == NULL){
+		printf("抱歉,学生信息插入失败,你可以先保存，然后重启系统");    //考虑空间分配失败情况并提示用户保存 
+	}
+	else{	
+		//判断链表是否未初始化,主要是对无学生信息的时候 
+		if(*head == NULL){
+			student->num = 1;
+			un_get_int(student);				 
+			int rank = get_ranking(a,student->all_score);			//计算该插入的排名 
+			insert(rank-1, student->all_score, a);					//插入 
+			(*num)++;											//num++(更新个数)
+			student->rank = rank;
+			*head = student;
+			*tail = student;
+			student->next = NULL;
+		}
+		else{
+			student->num = *least_num + 1;
+			least_num ++;
+			un_get_int(student);
+			int rank = get_ranking(a,student->all_score);
+			student->rank = rank;
+			insert(rank-1, student->all_score, a);
+			(*num)++;
+			(*tail)->next = student;				//只移动尾节点 
+			student->next = NULL;
+			*tail = student;
+		}
+	  }
+	}
+	printf("\t\t\t\t成功插%d条信息,返回主菜单",n);
+}
+
+//本科生链表信息域添加信息 
+void  un_get_int(ptr_UNstu stu){
+	//学号
+	printf("\t\t\t\t\t学号:%d",stu->num); 
+	//名字 
+	printf("\t\t\t\t\t名字:");
+	strcpy(stu->name, "\0");      //这个时候必须初始化，因为他要作为参数，不初始化会成为野指针 
+	to_get_name(stu->name);
+	printf("%s\n",stu->name);
+	//专业 
+	printf("\t\t\t\t\t专业:");
+	to_get_major(stu->major);
+	printf("%s\n",stu->major);
+	//性别 
+	printf("\t\t\t\t\t性别(0:男,1:女):");
+	if(rand()%2 == 0) stu->gender = stu->boy;
+	else stu->gender  = stu->gril;
+	printf("%d\n",stu->gender);
+	//班级 
+	char cls[][4] = {"1班","2班","3班","4班"};
+	printf("\t\t\t\t\t班级:");
+	int index = rand()%4;
+	char a[MAX_STR];
+	strcpy(a, stu->major);
+	strcpy(stu->cls,strcat(a,cls[index]));
+	printf("%s\n",stu->cls);
+	//分数 
+	printf("\t\t\t\t\t请按顺序输入分数(数学，英语，C语言):");
+	float allscore = 0;         
+	for(int i=0;i<3;i++){
+		scanf("%f",&stu->score[i]); 
+		allscore += stu->score[i];	  
+	}
+	stu->all_score = allscore;      //计算总分
+	printf("\n");
+	getchar();
+} 
+//这是打印中间线的函数 
+void print_(void){
+	int a[11] = {4,10, 10, 4, 15, 15, 8, 8, 8, 8, 4};
+		printf("\t\t\t+");
+		for(int i = 0;i<11;i++){
+	  		for(int j=0;j<a[i];j++){
+	  			printf("-");
+			  }
+			  printf("+");
+		  }
+		  printf("\n");
+}
+//打印一页的函数(10个)
+void page_print(ptr_UNstu p,int *xu_num){
+	system("cls");
+	for(int i=0;i<3;i++){
+		printf("\n");
+	}
+	printf("\t\t\t\t\t\t\t\t欢迎使用");
+	printf("\n");
+	printf("\n");
+	print_();
+	printf("\t\t\t|序号|学号      |名字      |性别|专业           |班级           |数学    |英语    |C语言   |总分    |校排|\n");
+	print_();
+	int num = 0;
+	while( p != NULL and num < 10){
+		print_un_stu(p,*xu_num);
+		p = p->next;
+		(*xu_num)++;
+		num++;
+	}
+}
+//打印主函数（支持翻页处理） 
+void page_process(ptr_UNstu head, int num){
+	int n = num/10+1;			//计算需要几页 
+	ptr_UNstu a[n];				//定义结构体指针数组(实现翻页操作，记录每一页的第一个，然后打印十个)
+	int ca_num = 0;  
+	int page_allnum = 0;
+	int xu_num = 1;
+	//用来赋值a,来记录每页的第一个信息               
+	while (head != NULL){
+		if(ca_num%10 == 0){
+			a[ca_num/10] = head;
+			page_allnum++;
+		}
+		head = head->next;
+		ca_num++;
+	}
+	int page_num = 0;
+	page_print(a[page_num],&xu_num);
+	while(1){
+		printf("\t\t\t\t(第%d页)<-->上一页(a),下一页(d),跳转(s),首页(q),最后一页(w),退出(e)<-->(最后一页为%d页):",page_num+1,page_allnum+1);
+		char choose[2];					//getchar简直太多bug了,换一个 
+		scanf("%s",choose);
+		printf("\n");
+		if(strcmp(choose, "a") == 0){
+			if(page_num == 0){
+				printf("\t\t\t\t\t\t已经第一页了\n");
+			}
+			else{
+				page_num--;
+				page_print(a[page_num],&xu_num);
+			}
+			
+		}
+		if (strcmp(choose, "d") == 0){
+			if(page_num == page_allnum - 1){
+				printf("\t\t\t\t\t\t已经是最后一页\n");
+			}
+			else{
+				page_num++;
+				page_print(a[page_num],&xu_num);
+			}
+		}
+		if(strcmp(choose, "s") == 0){
+			int choose_num;
+			printf("\t\t\t\t\t\t输入页数(注:最大页数%d)",page_allnum);
+			scanf("%d", &choose_num);
+			getchar();
+			if(choose_num > page_allnum or choose_num < 1){
+				printf("\t\t\t\t\t\t你输入的页码不存在\n");
+			}
+			else{
+				page_print(a[choose_num - 1],&xu_num);
+			}
+		}
+		if(strcmp(choose,"e") == 0){
+			break;
+		}
+		if(strcmp(choose,"q") == 0){
+			page_num = 0;
+			page_print(a[page_num],&xu_num);
+		}
+		if(strcmp(choose,"w") == 0){
+			page_num = page_allnum-1;
+			page_print(a[page_num],&xu_num);
+		}
+		
+	}
+	
+}
+//打印本科学生信息 
+void print_un_stu(ptr_UNstu stu,int num){
+	if(stu != NULL){
+		char gender[4];
+		if(stu->gender ==0){
+			strcpy(gender,"男");
+		}
+		else{
+			strcpy(gender,"女");
+		}
+		printf("\t\t\t|%-4d|%-10d|%-10s|%-4s|%-15s|%-15s|%-8.1f|%-8.1f|%-8.1f|%-8.1f|%-4d|\n",
+		num,stu->num, stu->name, gender, stu->major, stu->cls, stu->score[0], stu->score[1], stu->score[2], stu->all_score, stu->rank);
+		print_();
+	}
+}
+//打印所有信息 
+void print_all(ptr_UNstu stu,int num){
+	page_process(stu, num);
+}
+//查找信息 
+ptr_UNstu sear_un_stu(ptr_UNstu p, int command){
+	//通过名字查询 
+	if(command == 1){
+		char name[MAX_STR];
+		printf("\t\t\t\t\t\t请输入所要查询或修改的名字:");
+		scanf("%s",name);
+		int is_extist = 0;
+		while (p != NULL){
+			if (strcmp(p->name,name) == 0){
+				is_extist = 1;
+				return p; 
+			}
+			p = p->next; 
+	   	}
+	   if(is_extist == 0){
+	  		printf("\t\t\t\t\t\t抱歉你所查找的学生不存在\n");
+	  		return NULL;
+	   }
+	}
+	//通过学号查看 
+	else if(command == 2){
+		long num;
+		printf("\t\t\t\t\t\t输入所要查询或修改的学号:");
+		scanf("%d",&num);
+			int is_extist = 0;
+		while (p != NULL){
+			if (p->num == num){
+				is_extist = 1;
+				return p;
+			}
+			p = p->next; 
+	   	}
+	   if(is_extist == 0){
+	   		printf("\t\t\t\t\t\t抱歉你所查找的学生不存在\n");
+	   		return NULL;
+	   }	
+	}
+	else{
+		printf("\t\t\t\t\t\t你的输入有误");
+		return NULL;
+		
+	}
+}
+//对一个节点(信息域)进行复制 
+ptr_UNstu copy(ptr_UNstu n){
+	ptr_UNstu p;
+	p = (ptr_UNstu)malloc(unstu_size);
+	strcpy(p->name,n->name);
+	strcpy(p->cls,n->cls);
+	p->gender = n->gender;
+	p->num = n->num;
+	strcpy(p->major,n->major);
+	p->all_score = n->all_score;
+	for(int i=0;i<3;i++){
+		p->score[i] = n->score[i];
+	}
+	p->rank = n->rank;
+	return p;
+} 
+//查看一个类别，可建立视图 (注：返会一个数是记录信息长度)
+int ser_more_stu (ptr_UNstu head,ptr_UNstu *new_head,ptr_UNstu*new_tail,int command ){
+	int is_exti = 0;
+	int num;
+	if(head == NULL){
+		printf("\t\t\t\t\t\t学生信息为空");
+	}
+	else if(command == 4){
+		printf("\t\t\t\t\t\t输入要查询的专业");
+		char major[MAX_STR];
+		scanf("%s", major);
+		getchar();
+		system("cls");
+		while(head != NULL){
+			if(strcmp(head->major,major) == 0){
+				is_exti = 1;
+				ptr_UNstu p;
+				p = copy(head);			//这里定义了一个函数对head信息域复制，防止改动head对主链表的影响 
+				add_read(p,new_tail,new_head);
+				num++;
+			}
+			head = head->next;
+		}
+		if(is_exti == 0){
+			return 0;
+		}
+		else return num;
+	}
+	else if(command == 5){
+		printf("\t\t\t\t\t\t输入要查询的班级");
+		char name[MAX_STR];
+		scanf("%s", name);
+		getchar();
+		system("cls");
+		while(head != NULL){
+			if(strcmp(head->cls,name) == 0){
+				is_exti = 1;
+				ptr_UNstu p;
+				p = copy(head);			//这里定义了一个函数对head信息域复制，防止改动head对主链表的影响 
+				add_read(p,new_tail,new_head);	
+				num++;
+			}
+			head = head->next;
+		}
+		if(is_exti == 0){
+			return 0;
+		}
+		else 	return num;	
+	}
+	else if(command == 6){
+		printf("\t\t\t\t\t\t输入要查询的性别(1女/0男)");
+		int sex;
+		scanf("%d", &sex);
+		getchar();
+		system("cls");
+		while(head != NULL){
+			if(head->gender == sex){
+				is_exti = 1;
+				ptr_UNstu p;
+				p = copy(head);			//这里定义了一个函数对head信息域复制，防止改动head对主链表的影响 
+				add_read(p,new_tail,new_head);	
+				num++;
+			}
+			head = head->next;
+		}
+		if(is_exti == 0){
+			return 0;
+		}
+		else return num;
+	}
+	else if(command == 7 or command == 8 or command == 9){
+		system("cls");
+		while(head != NULL){
+			if(command == 7){
+				if(head->score[0] < 60){
+					is_exti = 1;
+					ptr_UNstu p;
+					p = copy(head);			//这里定义了一个函数对head信息域复制，防止改动head对主链表的影响 
+					add_read(p,new_tail,new_head);	
+					num++;
+				}
+			}
+			else if(command == 8){
+				if(head->score[1] < 60){
+					is_exti = 1;
+					ptr_UNstu p;
+					p = copy(head);			//这里定义了一个函数对head信息域复制，防止改动head对主链表的影响 
+					add_read(p,new_tail,new_head);	
+					num++;
+					}
+			}
+			else if(command == 9){
+				if(head->score[2] < 60){
+					is_exti = 1;
+					ptr_UNstu p;
+					p = copy(head);			//这里定义了一个函数对head信息域复制，防止改动head对主链表的影响 
+					add_read(p,new_tail,new_head);	
+					num++;
+					}
+			}
+			head = head->next;
+		}
+		if(is_exti == 0){
+			return 0;
+		}
+		else return num;
+	}
+	
+}
+//以名字删除节点 
+void delete_stu(ptr_UNstu *head,char name[MAX_STR],int *a){
+	if (*head == NULL){
+		printf("\t\t\t\t\t\t\t此时链表为空，不需要删除\n\n"); 
+	} 
+	else{
+		ptr_UNstu pre;			 //用双节点来删除 
+		ptr_UNstu behind;
+		pre = *head;
+		behind = pre->next;
+		int is_exit = 0;
+		if(*head != NULL&&(strcmp(name,(*head)->name)==0)){    //所删除元素在头节点,不判断这个可能会使程序崩溃 
+			pop((*head)->rank-1, a);
+			behind = *head;
+			*head = pre->next;						//注意;此时pre->next = NULL 
+			free(behind);
+		}
+		else{
+			while(behind != NULL){
+				if(strcmp(behind->name,name) == 0){
+					pop(behind->rank-1, a);
+					pre->next = behind->next;
+					free(behind);
+					behind =  NULL; 		//将behind 改为NULL，规避野指针同时停止 遍历 
+					is_exit = 1;
+				}
+				else{
+					pre = pre->next;
+					behind = behind->next;
+				}
+			}
+		if (is_exit == 0){
+			printf("你所要删除的学生不存在\n");
+		}
+	  }
+ }
+}
+//删除所有元素 
+void delete_all(ptr_UNstu *head){
+		ptr_UNstu behind;
+		ptr_UNstu pre;
+		pre = *head;
+		behind = pre->next;
+	if(*head == NULL){    //所删除元素在头节点,不判断这个可能会使程序崩溃 
+		printf("没有可删除的元素");
+	}
+	else{	
+		if((*head)->next == NULL){
+			behind = *head;
+			*head = pre->next;
+			free(behind);
+		}
+	else{	
+		while(behind != NULL){
+			pre->next = behind->next;
+			free(behind);
+			behind = behind->next;
+			}		
+		}
+	}	
+}
+//修改某个节点信息
+void modify(ptr_UNstu  p){
+	
+	getchar();           //去除换行符 
+	printf("名字(如不修改则换行):");
+	char try_name[MAX_STR];
+	fgets(try_name, MAX_STR, stdin);			//可以接受换行 
+	if(strlen(try_name)!= 1){
+		strcpy(p->name, try_name);
+		p->name[strlen(try_name)-1] = '\0';	//将换行符剔除 
+	}
+	printf("%s\n", p->name);
+	
+	printf("性别(1/0):");
+	char try_gender;
+	try_gender = getchar();
+	if(try_gender == '1'){
+		p->gender = p->gril;
+	}
+	if(try_gender == '0'){
+		p->gender = p->boy;
+	}
+	printf("专业:");
+	char try_major[MAX_STR];
+	fgets(try_major, MAX_STR, stdin);			//可以接受换行 
+	if(strlen(try_major)!= 1){
+		strcpy(p->major, try_major);
+			p->major[strlen(try_major)-1] = '\0';	//将换行符剔除 
+	}
+	for(int i = 0;i<3;i++){
+		char de;
+		if(i == 0){
+			printf("是否对数学分数进行修改(1:是，换行:不是):");
+			de = getchar();
+			if(de == '1'){
+				float score;
+				printf("输入数学分数:");
+				scanf("%f", &score);
+				getchar();
+				p->score[i] = score;
+			}
+		}
+		if(i == 1){
+			printf("是否对英语分数进行修改(1:是，其他:不是):");
+			de = getchar();
+			if(de == '1'){
+				float score;
+				printf("输入英语分数:");
+				scanf("%f", &score);
+				getchar();
+				p->score[i] = score;
+				}
+		}
+		if(i == 2){
+			printf("是否对C语言分数进行修改(1:是，其他:不是):");
+			de = getchar();
+			if(de == '1'){
+				float score;
+				printf("输入C语言分数:");
+				scanf("%f", &score);
+				getchar();
+				p->score[i] = score;
+				}
+			}
+	}
+	p->all_score = p->score[0]+p->score[1]+p->score[2];	
+		
+} 
+//由于链表的添加与删除所有需要在改动后更新所有学生的排名 
+void update_rank(int *rank, ptr_UNstu head){
+	int rank_list[10000];
+	int i= 0;
+	while(*(rank+i) != -1){
+		rank_list[i] = *(rank+i);
+		i++;
+	}
+	rank_list[i] = -1;
+	if(head == NULL){
+		printf("\t\t\t\t\t\t无信息更新");
+	}
+	else{
+		while(head != NULL){
+			head->rank = get_ranking(rank_list, head->all_score);
+			head = head->next;
+		}
+	}
+}
+//自己写一个简易的insert函数
+void insert (int index, int num, int *arr){
+	int start = index;//数组类型为（[1,1,1,1,-1],所以计算插入位置然后向后平移） 
+	int end = 0;
+	while(1){
+		if(arr[end] == -1){
+			end++;
+			break;
+		}
+		end++;
+	}
+	for(int i = end;i > index;i--){
+		arr[i] = arr[i-1]; 
+	} 
+	arr[index] = num;	
+}
+ //pop函数
+void pop(int index,int *arr){
+	int start = index;
+	int end = 0;
+	while(1){
+		if(arr[end] == -1){
+			break;
+		}
+		end++;
+	}
+	for(int i=index;i<end;i++){
+		arr[i] = arr[i+1];
+	}
+	arr[end] = 0;
+}
+//快速排序所用的比较函数
+int by_compare(const void *a,const void  *b){
+	return *(int *)b-*(int *)a;
+} 
+//输入一个数并得到相关排名
+int get_ranking(int a[],int b){
+	int n = 0;
+	while(a[n] != -1){
+		n++;
+	}
+	int right = 0;
+	int left = n;
+	int middle;
+	while(right < left){
+		middle = right+(left-right)/2;
+		if(a[middle] < b){
+			left = middle;
+		}
+		//等于的判断在求有重复分数时十分重要， 
+		if(a[middle] == b){
+			if(a[middle-1] == b){
+				left = middle;			//如果不是第一个就让左指针等于middle 
+			}
+			else{
+				return middle+1;		//如果是第一个则输出 
+			}
+		}
+		if(a[middle] > b){
+			right = middle+1;
+		}
+	}
+	return right+1;
+}
+//赋值节点的信息域(不使用前面的，应为输出不同)
+void copy_i(ptr_UNstu n,ptr_UNstu p){
+	strcpy(p->name,n->name);
+	strcpy(p->cls,n->cls);
+	p->gender = n->gender;
+	p->num = n->num;
+	strcpy(p->major,n->major);
+	p->all_score = n->all_score;
+	for(int i=0;i<3;i++){
+		p->score[i] = n->score[i];
+	}
+	p->rank = n->rank;
+}
+//交换节点的信息域 
+void swap(ptr_UNstu p, ptr_UNstu q){
+	ptr_UNstu temp;
+	temp = (ptr_UNstu)malloc(unstu_size);
+	copy_i(q,temp);
+	copy_i(p, q);
+	copy_i(temp,p);
+	free(temp);
+} 
+//按顺序重组链表(冒泡)
+void re_sort_by_score(ptr_UNstu *head,int num,int command){
+	ptr_UNstu temp;
+	ptr_UNstu  p;
+	ptr_UNstu  q;
+	temp = (ptr_UNstu)malloc(unstu_size);
+	for(int i = num;i > 0;i--){
+		p = *head;
+		q = p->next; 
+		while(q != NULL){
+			if(command == 0){
+				if(p->all_score < q->all_score){
+					swap(p,q);
+				}
+			}
+			else if(command == 1) {
+				if(p->score[0] < q->score[0]){
+					swap(p,q);
+				}
+			}
+			else if(command == 2){
+					if(p->score[1] < q->score[1]){
+						swap(p,q);
+				}
+			}
+			else if(command == 3){
+					if(p->score[2] < q->score[2]){
+						swap(p,q);
+				}
+			}
+			else if(command == 4){
+				if(strcmp(p->name,q->name) > 0){
+					swap(p,q);
+				}
+			}
+			else{
+				printf("\t\t\t\t\t\t输入有误");
+			}
+			p = p->next;
+			q = q->next;
+		}
+	}
+}
+//统计主函数
+void statistics(ptr_UNstu head, int num,double data[sub_num+1][sta_num]){
+	float *a[4];
+	float *p;
+	float *p2;
+	float *p3;
+	float *p4;
+	p = (float *)malloc(num*sizeof(float));
+	p2 = (float *)malloc(num*sizeof(float));
+	p3 = (float *)malloc(num*sizeof(float));
+	p4 = (float *)malloc(num*sizeof(float)); 
+	int n = 0;
+	while(head != NULL){
+		p[n] = head->score[0];
+		p2[n] = head->score[1];
+		p3[n] = head->score[2];
+		p4[n] = p[n]+p2[n]+p3[n];
+		head = head->next;
+		n++;
+	}
+	a[0] = p;
+	a[1] = p2;
+	a[2] = p3;
+	a[3] = p4;
+	int k = 0;
+	double result[6];
+	for(int i = 0;i < 4;i++){
+		if(i == 3){
+			k = 1;
+		}
+		calc(a[i], result, num, k);			//k用来判断是否是总分 
+		for(int  j = 0;j < 6;j++){
+			data[i][j] = result[j];
+		}
+	}
+} 
+//统计的计算函数
+void calc(float *a,double result[],int num, int k){
+	//平均数
+	double aver = 0;
+	int fail_num = 0;		//不及格的个数 
+	int good_num = 0;
+	for(int i = 1;i < num+1;i++){
+		if(k == 0){
+			if(a[i-1] < 60){
+				fail_num ++;
+			}
+			if(a[i-1] > 90){
+				good_num++;
+			}
+		}
+		else{
+			if(a[i-1] < 180){
+				fail_num++;
+			}
+			if(a[i-1] > 270){
+				good_num++;
+			}
+		}
+		aver = (aver*(i-1) + a[i-1])/i;
+	}
+	result[0] = aver;
+	//标准差 std
+	double stu = 0;
+	double std = 0;
+	for(int i=1;i < num+1;i++){
+		stu = (stu*(i-1) + pow(abs(a[i-1] - aver),2))/i;
+	}
+	std = sqrt(stu);
+	result[1] = std;
+	//最大值与最小值
+	float max = 0, min = 300;
+	for(int i = 0;i < num;i++){
+		if(a[i] > max){
+			max = a[i];
+		}
+		if(a[i] < min){
+			min = a[i];
+		}
+	} 
+	result[2] = (double)max;
+	result [3] = (double)min;	
+	result[4] = (double)fail_num;
+	result[5] = (double)good_num;	
+} 
+//打印所用 
+void print__(){
+	int a[7] = {5, 13, 13, 6, 6, 10, 10};
+	printf("\t\t\t\t\t+");
+	for(int i = 0;i<7;i++){
+		for(int j = 0;j < a[i];j++){
+			printf("-");
+		}
+		printf("+");
+	}
+	printf("\n");
+}
+//保存所有链表
+void save(ptr_UNstu stu,char name[],int num,double data[sub_num+1][sta_num]){
+	strcat(name,".txt");
+	FILE * p1;		//二进制保存 由于大多读取读取方法遇到空格和换行结束，所以用fread 
+	FILE * p2;		//文本保存 
+	int n = 0;
+	int k = 0;
+	ptr_UNstu head = stu;				//保存统计要用 
+	if(strcmp(name,"本科生(浏览).txt") == 0){
+		p1 = fopen("本科生(二进制数据).txt","wb");
+		p2 = fopen("本科生(浏览).txt","w");
+		k = 1;
+	}
+	else{
+		p2 = fopen(name,"w");
+	}
+	if(p1 == NULL||p2 == NULL){
+		printf("保存失败");
+		exit(1); 
+	}
+	char gender[4];
+	while(stu != NULL){
+		if(stu->gender ==0){
+			strcpy(gender,"男");
+		}
+		else{
+			strcpy(gender,"女");
+		}
+		fprintf(p2,"基本信息    学号:%d     名字:%s      性别:%s      专业:%s     班级:%s\n",stu->num,stu->name,gender,stu->major,stu->cls);
+		float math = stu->score[0];
+		float English = stu->score[1];
+		float C_pro = stu->score[2];	
+		fprintf(p2, "数学:%.1f   英语:%.1f   C语言:%.1f   总分:%.1f\n     校级排名:%d",math,English,C_pro,stu->all_score,stu->rank);
+		fprintf(p2, "------------------------------------------------------------------------------------------------------\n");
+		if(k == 1){
+			fwrite(stu, sizeof(UNstu), 1, p1);
+		}		
+		stu = stu->next;
+		n++;
+	}
+	 //在保存自动计算（统计数据），并加入文件中 
+	statistics(head, num,data);
+	char name_s [4][6] = {"数学\0", "英语\0", "c语言", "总分\0"};
+	fprintf(p2,"\n以下是统计信息:\n");
+	fprintf(p2,"|学科 |平均成绩     |方差         |最大值|最小值|不及格个数|优秀的个数|\n");
+	for(int i = 0;i<4;i++){
+			fprintf(p2,"|%-5s|%-13.6lf|%-13.6lf|%-6.1lf|%-6.1lf|%-10d|%-10d|\n",name_s[i],data[i][0],data[i][1],data[i][2],(data)[i][3],(int)data[i][4],(int)data[i][5]);
+			fprintf(p2,"-----------------------------------------------------------------------------------\n");
+			}
+	printf("\t\t\t\t\t插入了%d条信息",n);
+	getchar();
+	fclose(p2);
+	if(k == 1){
+		fclose(p1);
+	}	
+} 
+
+//用于给初始化链表添加元素 
+void add_read(ptr_UNstu p,ptr_UNstu *tail,ptr_UNstu *head){
+		if(*head == NULL){
+			*head = p;
+			*tail = p;
+			 p->next = NULL;
+		}
+		else{
+			(*tail)->next = p;
+			p->next = NULL;
+			*tail = p;
+		}
+}
+
+//读取数据 
+void read(ptr_UNstu *head,ptr_UNstu *tail, int a[],int *num){
+	FILE *fp;
+	fp = fopen("本科生(二进制数据).txt","rb");
+	if(fp == NULL){
+		printf("读取数据失败，请检查数据文件是否缺失");
+		exit(1);
+	}
+	int k = -1;    	//结束判断字符 
+	int n = 0;
+	while(k != 0){
+		ptr_UNstu p;
+		p = (ptr_UNstu) malloc(sizeof(UNstu));
+		k = fread(p, sizeof(UNstu),1,fp);
+		if(k != 0){
+			a[n] = p->all_score;
+			add_read(p,tail,head);
+			n++;
+		}
+	}
+	*num = n;
+	fclose(fp);	
+}
